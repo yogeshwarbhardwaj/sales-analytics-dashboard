@@ -24,7 +24,6 @@ function App() {
   const [categoryData, setCategoryData] = useState([]);
   const [regionData, setRegionData] = useState([]);
   const [dateData, setDateData] = useState([]);
-
   const [allSales, setAllSales] = useState([]);
 
   const [category, setCategory] = useState("All");
@@ -64,6 +63,21 @@ function App() {
       try {
         setLoading(true);
         setError("");
+
+        if (startDate && endDate && startDate > endDate) {
+          setSummary({
+            totalSales: 0,
+            totalQuantity: 0,
+            totalOrders: 0,
+            averageOrderValue: 0,
+          });
+          setCategoryData([]);
+          setRegionData([]);
+          setDateData([]);
+          setError("Start date cannot be after end date.");
+          setLoading(false);
+          return;
+        }
 
         const params = new URLSearchParams();
 
@@ -163,6 +177,18 @@ function App() {
         setLoading(false);
       } catch (error) {
         console.error(error);
+
+        setSummary({
+          totalSales: 0,
+          totalQuantity: 0,
+          totalOrders: 0,
+          averageOrderValue: 0,
+        });
+
+        setCategoryData([]);
+        setRegionData([]);
+        setDateData([]);
+
         setError("Unable to load dashboard data.");
         setLoading(false);
       }
@@ -219,12 +245,21 @@ function App() {
     });
   };
 
+  const formatRevenue = (value) => {
+    return `₹${Number(value).toLocaleString("en-IN")}`;
+  };
+
   const formattedDateData = dateData.map((item) => ({
     ...item,
     date: formatDate(item.date),
   }));
 
-  if (loading) {
+  const hasNoData =
+    categoryData.length === 0 &&
+    regionData.length === 0 &&
+    dateData.length === 0;
+
+  if (loading && !summary.totalOrders) {
     return (
       <div
         style={{
@@ -233,6 +268,7 @@ function App() {
           justifyContent: "center",
           alignItems: "center",
           fontFamily: "Arial",
+          background: "#f5f7fb",
         }}
       >
         <h2>Loading sales data...</h2>
@@ -247,8 +283,27 @@ function App() {
         background: "#f5f7fb",
         padding: "30px",
         fontFamily: "Arial, sans-serif",
+        position: "relative",
       }}
     >
+      {loading && summary.totalOrders > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            background: "#1f2937",
+            color: "white",
+            padding: "10px 16px",
+            borderRadius: "8px",
+            zIndex: 1000,
+            boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
+          }}
+        >
+          Updating dashboard...
+        </div>
+      )}
+
       <h1
         style={{
           textAlign: "center",
@@ -407,171 +462,219 @@ function App() {
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "20px",
-          maxWidth: "1200px",
-          margin: "0 auto 30px",
-        }}
-      >
+      {hasNoData && !error ? (
         <div
           style={{
+            maxWidth: "1200px",
+            margin: "0 auto 30px",
             background: "white",
-            padding: "25px",
+            padding: "40px",
             borderRadius: "12px",
             textAlign: "center",
             boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
           }}
         >
-          <h3>Total Sales</h3>
-          <h2>₹{summary.totalSales.toLocaleString()}</h2>
+          <h2>No data found</h2>
+          <p>
+            No sales records match the selected filters.
+          </p>
         </div>
+      ) : (
+        <>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "20px",
+              maxWidth: "1200px",
+              margin: "0 auto 30px",
+            }}
+          >
+            <div
+              style={{
+                background: "white",
+                padding: "25px",
+                borderRadius: "12px",
+                textAlign: "center",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+              }}
+            >
+              <h3>Total Sales</h3>
+              <h2>
+                ₹{summary.totalSales.toLocaleString("en-IN")}
+              </h2>
+            </div>
 
-        <div
-          style={{
-            background: "white",
-            padding: "25px",
-            borderRadius: "12px",
-            textAlign: "center",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h3>Total Quantity</h3>
-          <h2>{summary.totalQuantity}</h2>
-        </div>
+            <div
+              style={{
+                background: "white",
+                padding: "25px",
+                borderRadius: "12px",
+                textAlign: "center",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+              }}
+            >
+              <h3>Total Quantity</h3>
+              <h2>{summary.totalQuantity}</h2>
+            </div>
 
-        <div
-          style={{
-            background: "white",
-            padding: "25px",
-            borderRadius: "12px",
-            textAlign: "center",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h3>Total Orders</h3>
-          <h2>{summary.totalOrders}</h2>
-        </div>
+            <div
+              style={{
+                background: "white",
+                padding: "25px",
+                borderRadius: "12px",
+                textAlign: "center",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+              }}
+            >
+              <h3>Total Orders</h3>
+              <h2>{summary.totalOrders}</h2>
+            </div>
 
-        <div
-          style={{
-            background: "white",
-            padding: "25px",
-            borderRadius: "12px",
-            textAlign: "center",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h3>Average Order Value</h3>
-          <h2>
-            ₹{summary.averageOrderValue.toFixed(2)}
-          </h2>
-        </div>
-      </div>
+            <div
+              style={{
+                background: "white",
+                padding: "25px",
+                borderRadius: "12px",
+                textAlign: "center",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+              }}
+            >
+              <h3>Average Order Value</h3>
+              <h2>
+                ₹{summary.averageOrderValue.toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </h2>
+            </div>
+          </div>
 
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          display: "grid",
-          gap: "30px",
-        }}
-      >
-        <div
-          style={{
-            background: "white",
-            padding: "25px",
-            borderRadius: "12px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h2 style={{ textAlign: "center" }}>
-            Sales by Category
-          </h2>
+          <div
+            style={{
+              maxWidth: "1200px",
+              margin: "0 auto",
+              display: "grid",
+              gap: "30px",
+            }}
+          >
+            <div
+              style={{
+                background: "white",
+                padding: "25px",
+                borderRadius: "12px",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+              }}
+            >
+              <h2 style={{ textAlign: "center" }}>
+                Sales by Category
+              </h2>
 
-          {categoryData.length === 0 ? (
-            <p style={{ textAlign: "center" }}>
-              No category data available.
-            </p>
-          ) : (
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={categoryData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="revenue" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+              {categoryData.length === 0 ? (
+                <p style={{ textAlign: "center" }}>
+                  No category data available.
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={categoryData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="category" />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value) => [
+                        formatRevenue(value),
+                        "Revenue",
+                      ]}
+                    />
+                    <Bar
+                      dataKey="revenue"
+                      fill="#2563eb"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
 
-        <div
-          style={{
-            background: "white",
-            padding: "25px",
-            borderRadius: "12px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h2 style={{ textAlign: "center" }}>
-            Sales by Region
-          </h2>
+            <div
+              style={{
+                background: "white",
+                padding: "25px",
+                borderRadius: "12px",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+              }}
+            >
+              <h2 style={{ textAlign: "center" }}>
+                Sales by Region
+              </h2>
 
-          {regionData.length === 0 ? (
-            <p style={{ textAlign: "center" }}>
-              No region data available.
-            </p>
-          ) : (
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={regionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="region" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="revenue" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+              {regionData.length === 0 ? (
+                <p style={{ textAlign: "center" }}>
+                  No region data available.
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={regionData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="region" />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value) => [
+                        formatRevenue(value),
+                        "Revenue",
+                      ]}
+                    />
+                    <Bar
+                      dataKey="revenue"
+                      fill="#16a34a"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
 
-        <div
-          style={{
-            background: "white",
-            padding: "25px",
-            borderRadius: "12px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h2 style={{ textAlign: "center" }}>
-            Sales Trend
-          </h2>
+            <div
+              style={{
+                background: "white",
+                padding: "25px",
+                borderRadius: "12px",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+              }}
+            >
+              <h2 style={{ textAlign: "center" }}>
+                Sales Trend
+              </h2>
 
-          {formattedDateData.length === 0 ? (
-            <p style={{ textAlign: "center" }}>
-              No trend data available.
-            </p>
-          ) : (
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={formattedDateData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  strokeWidth={3}
-                  dot={{ r: 5 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
+              {formattedDateData.length === 0 ? (
+                <p style={{ textAlign: "center" }}>
+                  No trend data available.
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={formattedDateData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value) => [
+                        formatRevenue(value),
+                        "Revenue",
+                      ]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#9333ea"
+                      strokeWidth={3}
+                      dot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
