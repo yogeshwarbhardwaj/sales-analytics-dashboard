@@ -14,7 +14,6 @@ import {
 const API_URL = "http://localhost:5000/api/sales";
 
 function App() {
-  const [sales, setSales] = useState([]);
   const [summary, setSummary] = useState({
     totalSales: 0,
     totalQuantity: 0,
@@ -22,22 +21,24 @@ function App() {
     averageOrderValue: 0,
   });
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const [category, setCategory] = useState("All");
-  const [region, setRegion] = useState("All");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [categoryData, setCategoryData] = useState([]);
+  const [regionData, setRegionData] = useState([]);
+  const [dateData, setDateData] = useState([]);
 
   const [allSales, setAllSales] = useState([]);
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setLoading(true);
-        setError("");
+  const [category, setCategory] = useState("All");
+  const [region, setRegion] = useState("All");
+  const [product, setProduct] = useState("All");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
         const response = await fetch(API_URL);
 
         if (!response.ok) {
@@ -46,28 +47,22 @@ function App() {
 
         const result = await response.json();
 
-        const data = Array.isArray(result.data) ? result.data : [];
-
-        setAllSales(data);
-        setSales(data);
-        setLoading(false);
+        setAllSales(
+          Array.isArray(result.data) ? result.data : []
+        );
       } catch (error) {
         console.error(error);
         setError("Unable to load sales data.");
-        setLoading(false);
       }
     };
 
-    fetchInitialData();
+    fetchFilterOptions();
   }, []);
 
   useEffect(() => {
-    const fetchFilteredData = async () => {
-      if (loading && allSales.length === 0) {
-        return;
-      }
-
+    const fetchDashboardData = async () => {
       try {
+        setLoading(true);
         setError("");
 
         const params = new URLSearchParams();
@@ -80,6 +75,10 @@ function App() {
           params.append("region", region);
         }
 
+        if (product !== "All") {
+          params.append("product", product);
+        }
+
         if (startDate) {
           params.append("startDate", startDate);
         }
@@ -90,43 +89,87 @@ function App() {
 
         const query = params.toString();
 
-        const salesUrl = query
-          ? `${API_URL}?${query}`
-          : API_URL;
-
         const summaryUrl = query
           ? `${API_URL}/summary?${query}`
           : `${API_URL}/summary`;
 
-        const [salesResponse, summaryResponse] = await Promise.all([
-          fetch(salesUrl),
+        const categoryUrl = query
+          ? `${API_URL}/by-category?${query}`
+          : `${API_URL}/by-category`;
+
+        const regionUrl = query
+          ? `${API_URL}/by-region?${query}`
+          : `${API_URL}/by-region`;
+
+        const trendUrl = query
+          ? `${API_URL}/trend?${query}`
+          : `${API_URL}/trend`;
+
+        const [
+          summaryResponse,
+          categoryResponse,
+          regionResponse,
+          trendResponse,
+        ] = await Promise.all([
           fetch(summaryUrl),
+          fetch(categoryUrl),
+          fetch(regionUrl),
+          fetch(trendUrl),
         ]);
 
-        if (!salesResponse.ok || !summaryResponse.ok) {
-          throw new Error("Failed to fetch filtered data");
+        if (
+          !summaryResponse.ok ||
+          !categoryResponse.ok ||
+          !regionResponse.ok ||
+          !trendResponse.ok
+        ) {
+          throw new Error("Failed to fetch dashboard data");
         }
 
-        const salesResult = await salesResponse.json();
         const summaryResult = await summaryResponse.json();
+        const categoryResult = await categoryResponse.json();
+        const regionResult = await regionResponse.json();
+        const trendResult = await trendResponse.json();
 
-        setSales(
-          Array.isArray(salesResult.data)
-            ? salesResult.data
+        setSummary(
+          summaryResult.success
+            ? summaryResult.data
+            : {
+                totalSales: 0,
+                totalQuantity: 0,
+                totalOrders: 0,
+                averageOrderValue: 0,
+              }
+        );
+
+        setCategoryData(
+          Array.isArray(categoryResult.data)
+            ? categoryResult.data
             : []
         );
 
-        if (summaryResult.success) {
-          setSummary(summaryResult.data);
-        }
+        setRegionData(
+          Array.isArray(regionResult.data)
+            ? regionResult.data
+            : []
+        );
+
+        setDateData(
+          Array.isArray(trendResult.data)
+            ? trendResult.data
+            : []
+        );
+
+        setLoading(false);
       } catch (error) {
         console.error(error);
-        setError("Unable to load filtered sales data.");
+        setError("Unable to load dashboard data.");
+        setLoading(false);
       }
     };
 
-    fetchFilteredData();
-  }, [category, region, startDate, endDate, loading, allSales.length]);
+    fetchDashboardData();
+  }, [category, region, product, startDate, endDate]);
 
   const categories = useMemo(() => {
     return [
@@ -150,89 +193,36 @@ function App() {
     ];
   }, [allSales]);
 
-  const categoryData = useMemo(() => {
-    const grouped = {};
-
-    sales.forEach((sale) => {
-      if (!grouped[sale.category]) {
-        grouped[sale.category] = {
-          category: sale.category,
-          revenue: 0,
-        };
-      }
-
-      grouped[sale.category].revenue += Number(
-        sale.revenue || 0
-      );
-    });
-
-    return Object.values(grouped).sort(
-      (a, b) => b.revenue - a.revenue
-    );
-  }, [sales]);
-
-  const regionData = useMemo(() => {
-    const grouped = {};
-
-    sales.forEach((sale) => {
-      if (!grouped[sale.region]) {
-        grouped[sale.region] = {
-          region: sale.region,
-          revenue: 0,
-        };
-      }
-
-      grouped[sale.region].revenue += Number(
-        sale.revenue || 0
-      );
-    });
-
-    return Object.values(grouped).sort(
-      (a, b) => b.revenue - a.revenue
-    );
-  }, [sales]);
-
-  const dateData = useMemo(() => {
-    const grouped = {};
-
-    sales.forEach((sale) => {
-      const date = new Date(sale.date);
-      const key = date.toISOString().split("T")[0];
-
-      if (!grouped[key]) {
-        grouped[key] = {
-          date: key,
-          revenue: 0,
-        };
-      }
-
-      grouped[key].revenue += Number(
-        sale.revenue || 0
-      );
-    });
-
-    return Object.values(grouped)
-      .sort(
-        (a, b) =>
-          new Date(a.date) - new Date(b.date)
-      )
-      .map((item) => ({
-        ...item,
-        date: new Date(
-          item.date
-        ).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-        }),
-      }));
-  }, [sales]);
+  const products = useMemo(() => {
+    return [
+      "All",
+      ...new Set(
+        allSales
+          .map((sale) => sale.product)
+          .filter(Boolean)
+      ),
+    ];
+  }, [allSales]);
 
   const resetFilters = () => {
     setCategory("All");
     setRegion("All");
+    setProduct("All");
     setStartDate("");
     setEndDate("");
   };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+    });
+  };
+
+  const formattedDateData = dateData.map((item) => ({
+    ...item,
+    date: formatDate(item.date),
+  }));
 
   if (loading) {
     return (
@@ -310,9 +300,7 @@ function App() {
             <label>Category</label>
             <select
               value={category}
-              onChange={(e) =>
-                setCategory(e.target.value)
-              }
+              onChange={(e) => setCategory(e.target.value)}
               style={{
                 width: "100%",
                 padding: "10px",
@@ -333,9 +321,7 @@ function App() {
             <label>Region</label>
             <select
               value={region}
-              onChange={(e) =>
-                setRegion(e.target.value)
-              }
+              onChange={(e) => setRegion(e.target.value)}
               style={{
                 width: "100%",
                 padding: "10px",
@@ -353,13 +339,32 @@ function App() {
           </div>
 
           <div>
+            <label>Product</label>
+            <select
+              value={product}
+              onChange={(e) => setProduct(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px",
+                marginTop: "6px",
+                borderRadius: "6px",
+                border: "1px solid #ccc",
+              }}
+            >
+              {products.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label>Start Date</label>
             <input
               type="date"
               value={startDate}
-              onChange={(e) =>
-                setStartDate(e.target.value)
-              }
+              onChange={(e) => setStartDate(e.target.value)}
               style={{
                 width: "100%",
                 padding: "9px",
@@ -375,9 +380,7 @@ function App() {
             <input
               type="date"
               value={endDate}
-              onChange={(e) =>
-                setEndDate(e.target.value)
-              }
+              onChange={(e) => setEndDate(e.target.value)}
               style={{
                 width: "100%",
                 padding: "9px",
@@ -424,9 +427,7 @@ function App() {
           }}
         >
           <h3>Total Sales</h3>
-          <h2>
-            ₹{summary.totalSales.toLocaleString()}
-          </h2>
+          <h2>₹{summary.totalSales.toLocaleString()}</h2>
         </div>
 
         <div
@@ -491,15 +492,21 @@ function App() {
             Sales by Category
           </h2>
 
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={categoryData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="category" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="revenue" />
-            </BarChart>
-          </ResponsiveContainer>
+          {categoryData.length === 0 ? (
+            <p style={{ textAlign: "center" }}>
+              No category data available.
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={categoryData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="category" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="revenue" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         <div
@@ -514,15 +521,21 @@ function App() {
             Sales by Region
           </h2>
 
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={regionData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="region" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="revenue" />
-            </BarChart>
-          </ResponsiveContainer>
+          {regionData.length === 0 ? (
+            <p style={{ textAlign: "center" }}>
+              No region data available.
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={regionData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="region" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="revenue" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         <div
@@ -537,20 +550,26 @@ function App() {
             Sales Trend
           </h2>
 
-          <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={dateData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="revenue"
-                strokeWidth={3}
-                dot={{ r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {formattedDateData.length === 0 ? (
+            <p style={{ textAlign: "center" }}>
+              No trend data available.
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={formattedDateData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  strokeWidth={3}
+                  dot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>

@@ -1,6 +1,12 @@
 const Sale = require("../models/Sale");
 
-const buildFilter = ({ category, region, startDate, endDate }) => {
+const buildFilter = ({
+  category,
+  region,
+  product,
+  startDate,
+  endDate,
+}) => {
   const filter = {};
 
   if (category && category !== "All") {
@@ -9,6 +15,10 @@ const buildFilter = ({ category, region, startDate, endDate }) => {
 
   if (region && region !== "All") {
     filter.region = region;
+  }
+
+  if (product && product !== "All") {
+    filter.product = product;
   }
 
   if (startDate || endDate) {
@@ -59,12 +69,20 @@ const getAllSales = async (filters = {}) => {
 
   if (filter.$expr) {
     return await Sale.aggregate([
-      { $match: filter },
-      { $sort: { date: 1 } },
+      {
+        $match: filter,
+      },
+      {
+        $sort: {
+          date: 1,
+        },
+      },
     ]);
   }
 
-  return await Sale.find(filter).sort({ date: 1 });
+  return await Sale.find(filter).sort({
+    date: 1,
+  });
 };
 
 const getSalesSummary = async (filters = {}) => {
@@ -102,12 +120,14 @@ const getSalesSummary = async (filters = {}) => {
     },
   ]);
 
-  return result[0] || {
-    totalSales: 0,
-    totalQuantity: 0,
-    totalOrders: 0,
-    averageOrderValue: 0,
-  };
+  return (
+    result[0] || {
+      totalSales: 0,
+      totalQuantity: 0,
+      totalOrders: 0,
+      averageOrderValue: 0,
+    }
+  );
 };
 
 const getSalesByCategory = async (filters = {}) => {
