@@ -2,7 +2,7 @@ const salesService = require("../services/salesService");
 
 const getSales = async (req, res, next) => {
   try {
-    const sales = await salesService.getAllSales();
+    const sales = await salesService.getAllSales(req.query);
 
     res.status(200).json({
       success: true,
@@ -14,9 +14,22 @@ const getSales = async (req, res, next) => {
   }
 };
 
+const getSalesSummary = async (req, res, next) => {
+  try {
+    const data = await salesService.getSalesSummary(req.query);
+
+    res.status(200).json({
+      success: true,
+      data: data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getSalesByCategory = async (req, res, next) => {
   try {
-    const data = await salesService.getSalesByCategory();
+    const data = await salesService.getSalesByCategory(req.query);
 
     res.status(200).json({
       success: true,
@@ -29,7 +42,7 @@ const getSalesByCategory = async (req, res, next) => {
 
 const getSalesByRegion = async (req, res, next) => {
   try {
-    const data = await salesService.getSalesByRegion();
+    const data = await salesService.getSalesByRegion(req.query);
 
     res.status(200).json({
       success: true,
@@ -42,7 +55,7 @@ const getSalesByRegion = async (req, res, next) => {
 
 const getSalesByDate = async (req, res, next) => {
   try {
-    const data = await salesService.getSalesByDate();
+    const data = await salesService.getSalesByDate(req.query);
 
     res.status(200).json({
       success: true,
@@ -55,8 +68,8 @@ const getSalesByDate = async (req, res, next) => {
 
 module.exports = {
   getSales,
+  getSalesSummary,
   getSalesByCategory,
   getSalesByRegion,
   getSalesByDate,
 };
-

@@ -1,11 +1,122 @@
 const Sale = require("../models/Sale");
 
-const getAllSales = async () => {
-  return await Sale.find().sort({ date: 1 });
+const buildFilter = ({ category, region, startDate, endDate }) => {
+  const filter = {};
+
+  if (category && category !== "All") {
+    filter.category = category;
+  }
+
+  if (region && region !== "All") {
+    filter.region = region;
+  }
+
+  if (startDate || endDate) {
+    const conditions = [];
+
+    if (startDate) {
+      conditions.push({
+        $gte: [
+          {
+            $convert: {
+              input: "$date",
+              to: "date",
+              onError: null,
+              onNull: null,
+            },
+          },
+          new Date(`${startDate}T00:00:00.000Z`),
+        ],
+      });
+    }
+
+    if (endDate) {
+      conditions.push({
+        $lte: [
+          {
+            $convert: {
+              input: "$date",
+              to: "date",
+              onError: null,
+              onNull: null,
+            },
+          },
+          new Date(`${endDate}T23:59:59.999Z`),
+        ],
+      });
+    }
+
+    filter.$expr = {
+      $and: conditions,
+    };
+  }
+
+  return filter;
 };
 
-const getSalesByCategory = async () => {
+const getAllSales = async (filters = {}) => {
+  const filter = buildFilter(filters);
+
+  if (filter.$expr) {
+    return await Sale.aggregate([
+      { $match: filter },
+      { $sort: { date: 1 } },
+    ]);
+  }
+
+  return await Sale.find(filter).sort({ date: 1 });
+};
+
+const getSalesSummary = async (filters = {}) => {
+  const filter = buildFilter(filters);
+
   const result = await Sale.aggregate([
+    {
+      $match: filter,
+    },
+    {
+      $group: {
+        _id: null,
+        totalSales: {
+          $sum: "$revenue",
+        },
+        totalQuantity: {
+          $sum: "$quantity",
+        },
+        totalOrders: {
+          $sum: 1,
+        },
+        averageOrderValue: {
+          $avg: "$revenue",
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        totalSales: 1,
+        totalQuantity: 1,
+        totalOrders: 1,
+        averageOrderValue: 1,
+      },
+    },
+  ]);
+
+  return result[0] || {
+    totalSales: 0,
+    totalQuantity: 0,
+    totalOrders: 0,
+    averageOrderValue: 0,
+  };
+};
+
+const getSalesByCategory = async (filters = {}) => {
+  const filter = buildFilter(filters);
+
+  const result = await Sale.aggregate([
+    {
+      $match: filter,
+    },
     {
       $group: {
         _id: "$category",
@@ -35,8 +146,13 @@ const getSalesByCategory = async () => {
   return result;
 };
 
-const getSalesByRegion = async () => {
+const getSalesByRegion = async (filters = {}) => {
+  const filter = buildFilter(filters);
+
   const result = await Sale.aggregate([
+    {
+      $match: filter,
+    },
     {
       $group: {
         _id: "$region",
@@ -66,32 +182,37 @@ const getSalesByRegion = async () => {
   return result;
 };
 
-const getSalesByDate = async () => {
+const getSalesByDate = async (filters = {}) => {
+  const filter = buildFilter(filters);
+
   const result = await Sale.aggregate([
+    {
+      $match: filter,
+    },
     {
       $group: {
         _id: "$date",
         revenue: {
-          $sum: "$revenue"
+          $sum: "$revenue",
         },
         quantity: {
-          $sum: "$quantity"
-        }
-      }
+          $sum: "$quantity",
+        },
+      },
     },
     {
       $project: {
         _id: 0,
         date: "$_id",
         revenue: 1,
-        quantity: 1
-      }
+        quantity: 1,
+      },
     },
     {
       $sort: {
-        date: 1
-      }
-    }
+        date: 1,
+      },
+    },
   ]);
 
   return result;
@@ -99,6 +220,7 @@ const getSalesByDate = async () => {
 
 module.exports = {
   getAllSales,
+  getSalesSummary,
   getSalesByCategory,
   getSalesByRegion,
   getSalesByDate,

@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
   getSales,
+  getSalesSummary,
   getSalesByCategory,
   getSalesByRegion,
   getSalesByDate,
@@ -9,16 +10,14 @@ const {
 
 const router = express.Router();
 
-
 router.get("/", getSales);
 
+router.get("/summary", getSalesSummary);
 
-router.get("/category", getSalesByCategory);
+router.get("/by-category", getSalesByCategory);
 
+router.get("/by-region", getSalesByRegion);
 
-router.get("/region", getSalesByRegion);
-
-
-router.get("/date", getSalesByDate);
+router.get("/trend", getSalesByDate);
 
 module.exports = router;
