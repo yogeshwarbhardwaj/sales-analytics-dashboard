@@ -1,59 +1,77 @@
-Sales Analytics Dashboard
-A full-stack MERN application for analyzing sales data through an interactive dashboard.
+# Project Overview
+Sales Analytics Dashboard is a  MERN application for analyzing and visualizing sales data.
+Sales records are stored in MongoDB and processed using Node.js and Express.js REST APIs.
+The React frontend displays KPIs such as Total Sales, Total Quantity, Total Orders, and Average Order Value.
+Dynamic charts show sales trends, category-wise sales, and region-wise sales using API data.
+The dashboard also supports filters for Date Range, Category, Region, and Product.
 
-The application stores sales records in MongoDB, provides REST APIs using Node.js and Express.js, and displays dynamic KPIs, charts, and filters using React and Recharts.
-
-This project was built as a practical full-stack project to demonstrate REST APIs, MongoDB aggregation, React, dynamic data visualization, and API-based filtering.
-
-Features
-Total Sales
-Total Quantity
-Total Orders
-Average Order Value
-Sales by Category
-Sales by Region
-Sales Trend
-Category filter
-Region filter
-Product filter
-Date range filter
-Multiple filters together
-Reset Filters
-Dynamic API-based charts
-Loading state
-API error handling
-Invalid date range validation
-Empty result handling
-Responsive dashboard
-Tech Stack
-Frontend
-React
-Vite
-JavaScript
-Recharts
-Fetch API
-Inline CSS
-Backend
-Node.js
-Express.js
+# Architecture
 MongoDB
-Mongoose
-Project Structure
-sales-analytics-dashboard/
-├── backend/
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── services/
-│   ├── seed/
-│   ├── server.js
-│   └── .env.example
-│
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   └── App.jsx
-│   └── package.json
-│
-├── .gitignore
-└── README.md
+   ↓
+Node.js + Express.js
+   ↓
+REST APIs
+   ↓
+React
+   ↓
+Recharts
+   ↓
+Interactive Dashboard
+
+# Installation & Setup
+# Backend Setup
+cd backend
+npm install
+node server.js
+
+# Frontend Setup
+Open a new terminal:
+cd frontend
+npm install
+npm run dev
+
+# MongoDB Seed Instructions
+cd backend
+node seed/seed.js
+
+# API Documentation
+Sales APIs
+GET
+/api/sales
+Get all sales records
+GET
+/api/sales/summary
+Get sales summary and KPIs
+GET
+/api/sales/by-category
+Get sales grouped by category
+GET
+/api/sales/by-region
+Get sales grouped by region
+GET
+/api/sales/trend
+Get sales trend by date
+Sample Response
+{
+  "success": true,
+  "data": {
+    "totalSales": 3412500,
+    "totalQuantity": 430,
+    "totalOrders": 40,
+    "averageOrderValue": 85312.5
+  }
+}
+
+# Assumptions & Design Decisions
+
+Sales data is stored in MongoDB and accessed through REST APIs.
+
+MongoDB aggregation is used for summaries, trends, categories, and regions.
+
+Charts use API data dynamically instead of hardcoded values.
+
+Filters can be combined and update the dashboard dynamically.
+
+Empty or invalid results are handled with appropriate messages.
+
+React manages the dashboard state and API integration.
