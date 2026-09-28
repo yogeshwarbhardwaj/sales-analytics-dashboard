@@ -1,4 +1,4 @@
-# Project Overview
+# Sales Analytics Dashboar
 Sales Analytics Dashboard is a  MERN application for analyzing and visualizing sales data.
 Sales records are stored in MongoDB and processed using Node.js and Express.js REST APIs.
 The React frontend displays KPIs such as Total Sales, Total Quantity, Total Orders, and Average Order Value.
